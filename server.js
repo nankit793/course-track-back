@@ -22,14 +22,6 @@ app.use(express.urlencoded({ extended: true }));
 const MONGODB_URI =
   "mongodb+srv://nankit793_db_user:6Unrr9pq7vqmac2q@cluster0.sn2gd36.mongodb.net/mernapp?retryWrites=true&w=majority&appName=Cluster0";
 
-mongoose
-  .connect(MONGODB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => console.log("✅ Connected to MongoDB"))
-  .catch((error) => console.error("❌ MongoDB connection error:", error));
-
 // ✅ Routes
 app.use("/api/users", require("./routes/userRoutes"));
 app.use("/api/auth", require("./routes/authRoutes"));
@@ -44,7 +36,7 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-// ✅ Root Route
+// ✅ Root Route (used for health check)
 app.get("/", (req, res) => {
   res.json({ message: "Welcome to MERN API" });
 });
@@ -63,8 +55,30 @@ app.use((req, res) => {
 });
 
 // ✅ Start Server (AWS requires 0.0.0.0 and process.env.PORT)
-console.log("✅ Starting Express server...");
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
+async function startServer() {
+  try {
+    // Connect to MongoDB
+    await mongoose.connect(MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    console.log("✅ Connected to MongoDB");
+
+    // Start server after MongoDB connection
+    const PORT = process.env.PORT || 3001;
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error("❌ MongoDB connection error:", error);
+    // Still start server even if MongoDB fails (for health checks)
+    const PORT = process.env.PORT || 3001;
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(
+        `🚀 Server running on port ${PORT} (MongoDB connection failed)`
+      );
+    });
+  }
+}
+
+startServer();
