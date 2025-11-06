@@ -56,30 +56,20 @@ app.use((req, res) => {
 });
 
 // ✅ Start Server (AWS requires 0.0.0.0 and process.env.PORT)
-async function startServer() {
-  try {
-    // Connect to MongoDB
-    await mongoose.connect(MONGODB_URI, {
+// Start server immediately - don't wait for MongoDB (for health checks)
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+
+  // Connect to MongoDB in the background (non-blocking)
+  mongoose
+    .connect(MONGODB_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
+    })
+    .then(() => console.log("✅ Connected to MongoDB"))
+    .catch((error) => {
+      console.error("❌ MongoDB connection error:", error);
+      // Server continues running even if MongoDB fails
     });
-    console.log("✅ Connected to MongoDB");
-
-    // Start server after MongoDB connection
-    const PORT = process.env.PORT || 3001;
-    app.listen(PORT, "0.0.0.0", () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-    });
-  } catch (error) {
-    console.error("❌ MongoDB connection error:", error);
-    // Still start server even if MongoDB fails (for health checks)
-    const PORT = process.env.PORT || 3001;
-    app.listen(PORT, "0.0.0.0", () => {
-      console.log(
-        `🚀 Server running on port ${PORT} (MongoDB connection failed)`
-      );
-    });
-  }
-}
-
-startServer();
+});
